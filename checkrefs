@@ -1,0 +1,108 @@
+#!/usr/bin/python
+#
+# Copyright 2012 Jonathan Anderson
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import argparse
+import collections
+import logging
+import operator
+import re
+import sys
+
+arg_parser = argparse.ArgumentParser(
+		description='Checks BibTeX against LyX files for missing references.')
+
+arg_parser.add_argument('-i', '--ignore-missing', nargs='+',
+		type=re.compile, metavar='REGEX',
+		help='When reporting missing references, ignore anything that matches this regular expression.')
+
+arg_parser.add_argument('filenames', metavar='LYX_FILE', type=str, nargs='+',
+		help='LyX files containing citations (and referencing .bib files).')
+
+args = arg_parser.parse_args()
+
+
+def filter_missing(ref):
+	""" Should we include this missing reference in the report? """
+	if args.ignore_missing is None: return True
+	return not any([ r.match(ref) for r in args.ignore_missing ])
+
+def commasep(s):
+	""" De-quote and split a comma-separated line (like a LyX citation). """
+	if re.match('^".*"$', s): s = s[1:-1]
+	return frozenset([ i.strip() for i in s.split(',') ])
+
+
+def author_refs(refs):
+	""" Convert a collection of author:id references into an author->ids map. """
+	result = collections.defaultdict(list)
+	for ref in refs:
+		tokens = ref.split(':')
+		if len(tokens) == 2:
+			(author, id) = tokens
+			result[author].append(id)
+		else:
+			result['unknown'].append(tokens[0])
+
+	return result
+
+def print_refs(refs):
+	""" Print an author->ids map. """
+	for (author, ids) in sorted(author_refs(refs).items()):
+		print '%20s: %s' % (author, ', '.join(sorted(ids)))
+	print
+
+
+
+if __name__ == '__main__':
+	bibfiles = set()
+	citations = set()
+
+	print "Reading %d LyX files..." % len(args.filenames)
+	for filename in args.filenames:
+		for line in file(filename, 'r').readlines():
+			if line.startswith('key "'):
+				citations |= commasep(line.strip().replace("key ", ""))
+
+			elif line.startswith('bibfiles "'):
+				(_, files) = line.split()
+				bibfiles |= commasep(files)
+
+	references = set()
+	print "Reading %d BibTeX files..." % len(bibfiles)
+	for bib in [ f + '.bib' for f in bibfiles ]:
+		try: f = file(bib, 'r')
+		except IOError:
+			logging.error("Missing .bib file: '%s'" % bib)
+			continue
+
+		for line in f.readlines():
+			if not re.match('^\\@[a-z]+{.*,', line): continue
+
+			(_, key) = line.strip().split('{')
+			references.add(key.strip()[:-1])
+
+	missing = filter(filter_missing, citations - references)
+	uncited = filter(filter_missing, references - citations)
+
+
+	print
+	print '%d references in %d bib files, %d uncited.' % (
+		len(references), len(bibfiles), len(uncited))
+	print_refs(uncited)
+
+	print '%d references cited, missing %d.' % (len(citations), len(missing))
+	print_refs(missing)
+
