@@ -21,6 +21,9 @@ import operator
 import re
 import sys
 
+from references import author_refs, commasep
+
+
 arg_parser = argparse.ArgumentParser(
 		description='Checks BibTeX against LyX files for missing references.')
 
@@ -39,24 +42,6 @@ def filter_missing(ref):
 	if args.ignore_missing is None: return True
 	return not any([ r.match(ref) for r in args.ignore_missing ])
 
-def commasep(s):
-	""" De-quote and split a comma-separated line (like a LyX citation). """
-	if re.match('^".*"$', s): s = s[1:-1]
-	return frozenset([ i.strip() for i in s.split(',') ])
-
-
-def author_refs(refs):
-	""" Convert a collection of author:id references into an author->ids map. """
-	result = collections.defaultdict(list)
-	for ref in refs:
-		tokens = ref.split(':')
-		if len(tokens) == 2:
-			(author, id) = tokens
-			result[author].append(id)
-		else:
-			result['unknown'].append(tokens[0])
-
-	return result
 
 def print_refs(refs):
 	""" Print an author->ids map. """
