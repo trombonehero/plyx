@@ -1,4 +1,4 @@
-[[ plyx ]]
+= plyx =
 
 Python tools for working with [http://www.lyx.org/ Lyx] files in combination with [http://www.bibtex.org/ BibTeX] and [http://www.mekentosj.com/papers/ Papers].
 
