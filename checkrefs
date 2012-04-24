@@ -28,7 +28,7 @@ arg_parser = argparse.ArgumentParser(
 		description='Checks BibTeX against LyX files for missing references.')
 
 arg_parser.add_argument('-i', '--ignore-missing', nargs='+',
-		type=re.compile, metavar='REGEX',
+		type=re.compile, metavar='REGEX', default=[re.compile('rfc[0-9]+')],
 		help='When reporting missing references, ignore anything that matches this regular expression.')
 
 arg_parser.add_argument('filenames', metavar='LYX_FILE', type=str, nargs='+',
