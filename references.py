@@ -21,12 +21,8 @@ def author_refs(refs):
 	""" Convert a collection of author:id references into an author->ids map. """
 	result = collections.defaultdict(list)
 	for ref in refs:
-		tokens = ref.split(':')
-		if len(tokens) == 2:
-			(author, id) = tokens
-			result[author].append(id)
-		else:
-			result['unknown'].append(tokens[0])
+		(author, id) = ref.split(':', 1)
+		result[author].append(id)
 
 	return result
 
